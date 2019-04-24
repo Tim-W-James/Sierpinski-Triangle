@@ -16,6 +16,8 @@ data TurtleCommand
             -- will draw.
   deriving (Eq, Show)
 
+data TurtleState = TurtleState Bool Point Radians
+
 -- Task 1: Drawing Shapes
 
 -- | triangle returns a list of functions needed to draw a triangle
@@ -33,8 +35,8 @@ triangle n =
 
 -- | polygon' returns a list of commands needed to draw a polygon
 -- with the number of sides and side length inputted.
-polygon' :: Int -> Double -> [TurtleCommand]
-polygon' totalSides sideLength
+myPolygon :: Int -> Double -> [TurtleCommand]
+myPolygon totalSides sideLength
   | totalSides > 2 =
     polygonHelper (fromIntegral totalSides) sideLength totalSides []
   | otherwise =
@@ -56,16 +58,30 @@ polygon' totalSides sideLength
 -- Task 2: Interpreting Turtle Commands
 
 runTurtle :: [TurtleCommand] -> Picture
-runTurtle = undefined -- TODO
-
+runTurtle commandList = runTurtleHelper commandList (TurtleState False (0,0) 0) blank
+  where
+    runTurtleHelper :: [TurtleCommand] -> TurtleState -> Picture -> Picture
+    runTurtleHelper commandList (TurtleState isPenDown (currentPosX,currentPosY) currentFacing) carry = case commandList of
+      [] -> carry
+      x:xs -> case x of
+        PenDown ->
+          runTurtleHelper xs (TurtleState True (currentPosX,currentPosY) currentFacing) carry
+        Forward y
+          | isPenDown == True -> runTurtleHelper xs (TurtleState isPenDown (currentPosX - y * (sin currentFacing),currentPosY + y * (cos currentFacing)) currentFacing) (polyline [(currentPosX,currentPosY),(currentPosX - y * (sin currentFacing),currentPosY + y * (cos currentFacing))] & carry)
+          | otherwise -> runTurtleHelper xs (TurtleState isPenDown (currentPosX - y * (sin currentFacing),currentPosY + y * (cos currentFacing)) currentFacing) carry
+        Turn y ->
+          runTurtleHelper xs (TurtleState isPenDown (currentPosX,currentPosY) (y + currentFacing)) carry
+        _ ->
+          runTurtleHelper xs (TurtleState False (currentPosX,currentPosY) currentFacing) carry
 
 -- Task 3: Sierpinski's Triangle
 --   COMP1100: Implement this directly (Task 3A)
 --   COMP1130: Implement this using an L-System (Task 3B)
 
 sierpinski :: Int -> Double -> [TurtleCommand]
-sierpinski = undefined -- TODO
-
+sierpinski levels sideLength = case levels of
+  0 -> blank
+  n -> triangle sideLength
 
 -- Task 3B: L-Systems (COMP1130 Only)
 
@@ -153,7 +169,3 @@ comp1100 = concat [start, c, o, m, p, one, one, o, o]
 
     -- Diagonal length of a right-angle triangle with both sides 0.5
     d = sqrt (2 * 0.5 * 0.5)
-
--- | polygon test
--- >>> polygon 3 1
--- triangle 1

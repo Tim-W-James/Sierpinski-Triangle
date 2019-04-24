@@ -40,7 +40,7 @@ render mode = picture & coordinatePlane
   where picture = Turtle.runTurtle
           (case mode of
              Triangle -> Turtle.triangle 6.5
-             Polygon n -> Turtle.polygon n 3.0
+             Polygon n -> Turtle.myPolygon n 3.0
              Comp1100 -> Turtle.comp1100
              Sierpinski -> Turtle.sierpinski 5 10.0
              LSystem -> Turtle.lSystemCommands)
