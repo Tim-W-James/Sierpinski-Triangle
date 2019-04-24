@@ -18,12 +18,40 @@ data TurtleCommand
 
 -- Task 1: Drawing Shapes
 
+-- | triangle returns a list of functions needed to draw a triangle
+-- with the side length inputted.
 triangle :: Double -> [TurtleCommand]
-triangle = undefined -- TODO
+triangle n =
+  PenDown :
+  Forward n :
+  Turn (2 * pi/3) :
+  Forward n :
+  Turn (2 * pi/3) :
+  Forward n :
+  Turn (2 * pi/3) :
+  PenUp : []
 
-polygon :: Int -> Double -> [TurtleCommand]
-polygon = undefined -- TODO
-
+-- | polygon' returns a list of commands needed to draw a polygon
+-- with the number of sides and side length inputted.
+polygon' :: Int -> Double -> [TurtleCommand]
+polygon' totalSides sideLength
+  | totalSides > 2 =
+    polygonHelper (fromIntegral totalSides) sideLength totalSides []
+  | otherwise =
+    error "a polygon must have at least 3 sides"
+  where
+    polygonHelper :: Double -> Double -> Int -> [TurtleCommand] -> [TurtleCommand]
+    polygonHelper totalSides sideLength remainingSides carry = case carry of
+      [] ->
+        polygonHelper totalSides sideLength remainingSides [PenUp]
+      _
+        | remainingSides == 0 ->
+          PenDown : carry
+        | otherwise ->
+          polygonHelper totalSides sideLength (remainingSides - 1)
+          (Forward sideLength :
+          Turn (pi / 180 * (180 - 180 * (totalSides - 2) / totalSides)) :
+          carry)
 
 -- Task 2: Interpreting Turtle Commands
 
@@ -125,3 +153,7 @@ comp1100 = concat [start, c, o, m, p, one, one, o, o]
 
     -- Diagonal length of a right-angle triangle with both sides 0.5
     d = sqrt (2 * 0.5 * 0.5)
+
+-- | polygon test
+-- >>> polygon 3 1
+-- triangle 1
