@@ -1,3 +1,10 @@
+{-|
+Module      : Turtle
+Description : Defines functions that generate a list of commands to generate
+              triangles, polygons, and sierpinski fractals, and a function which
+              converts those commands into a Picture.
+Maintainer  : u6947396@anu.edu.au
+-}
 module Turtle where
 
 import CodeWorld
@@ -16,77 +23,149 @@ data TurtleCommand
             -- will draw.
   deriving (Eq, Show)
 
-data TurtleState = TurtleState Bool Point Radians
+-- | Describes the current state of the turtle from TurtleCommands
+data TurtleState =
+  -- ^ Contains a Bool that is True when the pen is down, a Point
+  -- representing the current position, and Radians representing
+  -- the current rotation.
+  TurtleState Bool Point Radians
 
 -- Task 1: Drawing Shapes
+
+-- | Frequently used Radians constant for building triangles.
+triRConst :: Radians
+triRConst = 2 * pi/3
 
 -- | triangle returns a list of functions needed to draw a triangle
 -- with the side length inputted.
 triangle :: Double -> [TurtleCommand]
-triangle n =
-  PenDown :
-  Forward n :
-  Turn (2 * pi/3) :
-  Forward n :
-  Turn (2 * pi/3) :
-  Forward n :
-  Turn (2 * pi/3) :
-  PenUp : []
+triangle sdLength =
+  PenDown : -- List should start with PenDown.
+  Forward sdLength :
+  Turn triRConst :
+  Forward sdLength :
+  Turn triRConst :
+  Forward sdLength :
+  Turn triRConst : -- End position and facing should equal start.
+  PenUp : [] -- List should end with PenUp.
 
--- | polygon' returns a list of commands needed to draw a polygon
+-- | myPolygon returns a list of commands needed to draw a polygon
 -- with the number of sides and side length inputted.
+-- Renamed from 'polygon' as to not conflict with the pre-defined
+-- CodeWorld function.
 myPolygon :: Int -> Double -> [TurtleCommand]
-myPolygon totalSides sideLength
-  | totalSides > 2 =
-    polygonHelper (fromIntegral totalSides) sideLength totalSides []
+myPolygon sides sideLength
+  | sides > 2 =
+    myPolygonHelper (fromIntegral sides) sideLength sides []
   | otherwise =
     error "a polygon must have at least 3 sides"
   where
-    polygonHelper :: Double -> Double -> Int -> [TurtleCommand] -> [TurtleCommand]
-    polygonHelper totalSides sideLength remainingSides carry = case carry of
-      [] ->
-        polygonHelper totalSides sideLength remainingSides [PenUp]
+    -- myPolygonHelper allows for recursive tracking of remainingSides and
+    -- a carry to compound TurtleCommands.
+    myPolygonHelper :: Double -> Double -> Int -> [TurtleCommand] -> [TurtleCommand]
+    myPolygonHelper totalSides sdLength remainingSides carry = case carry of
+      [] -> -- List should end with PenUp.
+        myPolygonHelper totalSides sdLength remainingSides [PenUp]
       _
-        | remainingSides == 0 ->
+        | remainingSides == 0 -> -- List should start with PenDown.
           PenDown : carry
-        | otherwise ->
-          polygonHelper totalSides sideLength (remainingSides - 1)
+        | otherwise -> -- Forward and Turn commands fall between PenDown and PenUp.
+          myPolygonHelper totalSides sdLength (remainingSides - 1)
           (Forward sideLength :
           Turn (pi / 180 * (180 - 180 * (totalSides - 2) / totalSides)) :
           carry)
 
 -- Task 2: Interpreting Turtle Commands
+-- | Turtle starts facing north at (0,0)
+initialState :: TurtleState
+initialState = TurtleState False (0,0) 0
 
+-- | runTurtle constructs a Picture from a list of commands our Turtle
+-- responds to, where a polyline is only drawn when pen is down.
 runTurtle :: [TurtleCommand] -> Picture
-runTurtle commandList = runTurtleHelper commandList (TurtleState False (0,0) 0) blank
+runTurtle commandList = runTurtleHelper commandList initialState blank
   where
+    -- runTurtleHelper allows for recursive tracking of TurtleState and
+    -- a carry to compound each polyline that composes the Picture.
     runTurtleHelper :: [TurtleCommand] -> TurtleState -> Picture -> Picture
-    runTurtleHelper commandList (TurtleState isPenDown (currentPosX,currentPosY) currentFacing) carry = case commandList of
+    runTurtleHelper cmdList (TurtleState isPenDown currPos currFacing) carry = case cmdList of
       [] -> carry
       x:xs -> case x of
-        PenDown ->
-          runTurtleHelper xs (TurtleState True (currentPosX,currentPosY) currentFacing) carry
+        PenDown -> -- isPenDown is set to True to allow drawing.
+          runTurtleHelper xs (TurtleState True currPos currFacing) carry
+
         Forward y
-          | isPenDown == True -> runTurtleHelper xs (TurtleState isPenDown (currentPosX - y * (sin currentFacing),currentPosY + y * (cos currentFacing)) currentFacing) (polyline [(currentPosX,currentPosY),(currentPosX - y * (sin currentFacing),currentPosY + y * (cos currentFacing))] & carry)
-          | otherwise -> runTurtleHelper xs (TurtleState isPenDown (currentPosX - y * (sin currentFacing),currentPosY + y * (cos currentFacing)) currentFacing) carry
-        Turn y ->
-          runTurtleHelper xs (TurtleState isPenDown (currentPosX,currentPosY) (y + currentFacing)) carry
-        _ ->
-          runTurtleHelper xs (TurtleState False (currentPosX,currentPosY) currentFacing) carry
+          | isPenDown == True -> -- If able to draw, move and
+            -- add a polyline between start and finish points to the carry.
+            runTurtleHelper xs (TurtleState isPenDown
+            (posAfterMove y currPos currFacing) currFacing)
+            (polyline [currPos,(posAfterMove y currPos currFacing)] & carry)
+
+          | otherwise -> -- Otherwise, only move.
+            runTurtleHelper xs (TurtleState isPenDown
+            (posAfterMove y currPos currFacing) currFacing) carry
+
+        Turn z -> -- Rotate by z in Radians.
+          runTurtleHelper xs (TurtleState isPenDown
+          currPos (z + currFacing)) carry
+
+        _ -> -- isPenDown is set to False to not allow drawing.
+          runTurtleHelper xs (TurtleState False currPos currFacing) carry
+
+    -- Calculates a destination point given a distance traveling, current point,
+    -- and current direction facing.
+    posAfterMove :: Double -> Point -> Radians -> Point
+    posAfterMove dist (posX,posY) facing =
+      (posX - dist * (sin facing),posY + dist * (cos facing))
 
 -- Task 3: Sierpinski's Triangle
 --   COMP1100: Implement this directly (Task 3A)
 --   COMP1130: Implement this using an L-System (Task 3B)
 
+-- | sierpinski returns a list of functions needed to
+-- draw a sierpinski triangle fractal with the side
+-- length and number of fractal levels inputted.
 sierpinski :: Int -> Double -> [TurtleCommand]
-sierpinski levels sideLength = case levels of
-  0 -> blank
-  n -> triangle sideLength
+sierpinski totalLvls sdLength
+  | totalLvls < 0 || sdLength < 0 =
+    error "values may not be negative"
+  | totalLvls == 0 =
+    []
+  | otherwise = -- Builds each level individually and compounds them.
+    sierpinski (totalLvls - 1) sdLength ++
+    levelBuilder totalLvls totalLvls sdLength
+
+  where
+    -- levelBuilder returns a list of commands required for a single level,
+    -- where all triangles have the same side length.
+    levelBuilder :: Int -> Int -> Double -> [TurtleCommand]
+    levelBuilder currLvl mstrLvl mstrLength
+      | currLvl == 1 = -- At level 1, a triangle itself is constructed.
+        triangle (sdLengthCalc mstrLvl mstrLength)
+      | otherwise = -- Otherwise, each level of commands are
+                    -- recursively compounded.
+        triangleCompounder currLvl mstrLength
+        (levelBuilder (currLvl - 1) mstrLvl mstrLength)
+
+    -- triangleCompounder forms a triangle shape and executes a list
+    -- of commands at each vertex facing north.
+    triangleCompounder :: Int -> Double -> [TurtleCommand] -> [TurtleCommand]
+    triangleCompounder baseLvl baseLength baseCmdLst =
+      baseCmdLst ++
+      [Forward (sdLengthCalc baseLvl baseLength)] ++
+      baseCmdLst ++ [Turn triRConst] ++
+      [Forward (sdLengthCalc baseLvl baseLength)] ++ [Turn (-triRConst)] ++
+      baseCmdLst ++ [Turn (-triRConst)] ++
+      [Forward (sdLengthCalc baseLvl baseLength)] ++ [Turn triRConst]
+
+    -- Calculates a particular side length depending on the fractal level.
+    sdLengthCalc :: Int -> Double -> Double
+    sdLengthCalc lvl subLength = (subLength / 2^(lvl - 1))
 
 -- Task 3B: L-Systems (COMP1130 Only)
 
 lSystemCommands :: [TurtleCommand]
-lSystemCommands = undefined -- TODO
+lSystemCommands = undefined -- COMP1130 Only
 
 
 

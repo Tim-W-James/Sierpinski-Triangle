@@ -1,3 +1,8 @@
+{-|
+Module      : TurtleTest
+Description : Defines tests for functions defined in Turtle.hs.
+Maintainer  : u6947396@anu.edu.au
+-}
 module Main where
 
 import Turtle
