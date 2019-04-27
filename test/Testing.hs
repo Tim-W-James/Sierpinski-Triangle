@@ -1,6 +1,7 @@
 module Testing where
 
 import CodeWorld
+import Turtle
 import System.Exit
 
 -- | A 'Test' is a 'String' label identifying the thing being tested,
@@ -70,6 +71,16 @@ assertPointApproxEqual (ax, ay) (ex, ey)
   | abs (ax - ex) < 0.0001 && abs (ay - ey) < 0.0001 = OK
   | otherwise =
     Fail (show (ax, ay) ++ " is not approx. equal to\n" ++ show (ex, ey))
+
+-- | Like 'assertApproxEqual', but for testing whether two 'TurtleStates's are
+-- close enough to each other.
+assertTurtleStateApproxEqual :: TurtleState -> TurtleState -> TestResult
+assertTurtleStateApproxEqual (TurtleState isPenDownA (ax, ay) facingA) (TurtleState isPenDownE (ex, ey) facingE)
+  | isPenDownA == isPenDownE && abs (ax - ex) < 0.0001 && abs (ay - ey) < 0.0001 && abs (facingA - facingE) < 0.0001 = OK
+  | otherwise =
+    Fail (show (TurtleState isPenDownA (ax, ay) facingA) ++
+    " is not approx. equal to\n" ++
+    show (TurtleState isPenDownE (ex, ey) facingE))
 
 -- | Run a list of tests. You are not expected to understand how this
 -- works.

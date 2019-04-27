@@ -1,8 +1,8 @@
 {-|
 Module      : Turtle
 Description : Defines functions that generate a list of commands to generate
-              triangles, polygons, and sierpinski fractals, and a function which
-              converts those commands into a Picture.
+              triangles, polygons, and sierpinski fractals, and a function
+              which converts those commands into a Picture.
 Maintainer  : u6947396@anu.edu.au
 -}
 module Turtle where
@@ -29,6 +29,7 @@ data TurtleState =
   -- representing the current position, and Radians representing
   -- the current rotation.
   TurtleState Bool Point Radians
+  deriving (Eq, Show)
 
 -- Task 1: Drawing Shapes
 
@@ -55,21 +56,26 @@ triangle sdLength =
 -- CodeWorld function.
 myPolygon :: Int -> Double -> [TurtleCommand]
 myPolygon sides sideLength
-  | sides > 2 =
+  | sides > 2 && sideLength >= 0 =
     myPolygonHelper (fromIntegral sides) sideLength sides []
-  | otherwise =
+  | sides < 3 =
     error "a polygon must have at least 3 sides"
+  | otherwise =
+    error "values may not be negative"
+
   where
     -- myPolygonHelper allows for recursive tracking of remainingSides and
     -- a carry to compound TurtleCommands.
-    myPolygonHelper :: Double -> Double -> Int -> [TurtleCommand] -> [TurtleCommand]
+    myPolygonHelper :: Double -> Double -> Int
+      -> [TurtleCommand] -> [TurtleCommand]
     myPolygonHelper totalSides sdLength remainingSides carry = case carry of
       [] -> -- List should end with PenUp.
         myPolygonHelper totalSides sdLength remainingSides [PenUp]
       _
         | remainingSides == 0 -> -- List should start with PenDown.
           PenDown : carry
-        | otherwise -> -- Forward and Turn commands fall between PenDown and PenUp.
+        | otherwise -> -- Forward and Turn commands fall between
+                       -- PenDown and PenUp.
           myPolygonHelper totalSides sdLength (remainingSides - 1)
           (Forward sideLength :
           Turn (pi / 180 * (180 - 180 * (totalSides - 2) / totalSides)) :
@@ -80,6 +86,12 @@ myPolygon sides sideLength
 initialState :: TurtleState
 initialState = TurtleState False (0,0) 0
 
+-- | Calculates a destination point given a distance traveling,
+-- current point, and current direction facing.
+posAfterMove :: Double -> Point -> Radians -> Point
+posAfterMove dist (posX,posY) facing =
+  (posX - dist * (sin facing),posY + dist * (cos facing))
+
 -- | runTurtle constructs a Picture from a list of commands our Turtle
 -- responds to, where a polyline is only drawn when pen is down.
 runTurtle :: [TurtleCommand] -> Picture
@@ -88,7 +100,8 @@ runTurtle commandList = runTurtleHelper commandList initialState blank
     -- runTurtleHelper allows for recursive tracking of TurtleState and
     -- a carry to compound each polyline that composes the Picture.
     runTurtleHelper :: [TurtleCommand] -> TurtleState -> Picture -> Picture
-    runTurtleHelper cmdList (TurtleState isPenDown currPos currFacing) carry = case cmdList of
+    runTurtleHelper cmdList (TurtleState isPenDown currPos currFacing) carry =
+      case cmdList of
       [] -> carry
       x:xs -> case x of
         PenDown -> -- isPenDown is set to True to allow drawing.
@@ -112,15 +125,8 @@ runTurtle commandList = runTurtleHelper commandList initialState blank
         _ -> -- isPenDown is set to False to not allow drawing.
           runTurtleHelper xs (TurtleState False currPos currFacing) carry
 
-    -- Calculates a destination point given a distance traveling, current point,
-    -- and current direction facing.
-    posAfterMove :: Double -> Point -> Radians -> Point
-    posAfterMove dist (posX,posY) facing =
-      (posX - dist * (sin facing),posY + dist * (cos facing))
-
 -- Task 3: Sierpinski's Triangle
 --   COMP1100: Implement this directly (Task 3A)
---   COMP1130: Implement this using an L-System (Task 3B)
 
 -- | sierpinski returns a list of functions needed to
 -- draw a sierpinski triangle fractal with the side
@@ -166,8 +172,6 @@ sierpinski totalLvls sdLength
 
 lSystemCommands :: [TurtleCommand]
 lSystemCommands = undefined -- COMP1130 Only
-
-
 
 -- | A more complex example to test your interpreter.
 comp1100 :: [TurtleCommand]
