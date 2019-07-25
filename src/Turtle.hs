@@ -2,7 +2,7 @@
 Module      : Turtle
 Description : Defines functions that generate a list of commands to generate
               triangles, polygons, and sierpinski fractals, and a function
-              which converts those commands into a Picture.
+              which converts those commands into a Picture. Use cabal run.
 Maintainer  : u6947396@anu.edu.au
 -}
 module Turtle where
